@@ -1450,10 +1450,13 @@ converting to numeric...</code></pre>
 <p>However, in time series analysis what we are interested in are the factor values that gradually change along a covariate of interest. To achieve this, we need to start introducing some small but important changes in our assumption. Instead of assuming that the latent factors are independent, we model them with a structured covariance matrix derived from a Gaussian Process (GP). This matrix, often denoted as <span class="math inline">\(K\)</span>, captures the correlation between the factors based on their position in the covariate space. By using a GP as our prior on <span class="math inline">\(Z\)</span>, we are essentially saying that nearby points in our covariate (e.g., time or space) will have similar factor values, introducing a smoothness constraint. The specific nature of this smoothness - whether it’s a general trend, periodicity, or some other pattern - is determined by the kernel function we choose for the GP. This approach allows us to model complex, structured behaviors in our factors, making our GFA model more flexible and capable of capturing the intricate patterns in multi-view data that vary along a specific covariate.</p>
 <p>More specifically, we are going to use Exponentiated Quadratic (EQ) kernel, also commonly referred to as Gaussian kernel, is one of the most widely used kernels in Gaussian Processes. Its formula is given by:</p>
 <p><span class="math display">\[k(x, x') = \sigma^2 \exp\left(-\frac{(x - x')^2}{2l^2}\right)\]</span></p>
-<p>Where: - <span class="math inline">\(x\)</span> and <span class="math inline">\(x'\)</span> are two points in the input space. - <span class="math inline">\(\sigma^2\)</span> is the variance parameter, which controls the overall scale of the function. - <span class="math inline">\(l\)</span> is the lengthscale parameter, which determines how quickly the correlation between two points decays with distance.</p>
-<p>The EQ kernel has a few key properties and implications: 1. <strong>Locality</strong>: The lengthscale <span class="math inline">\(l\)</span> determines how “local” the kernel is. A small <span class="math inline">\(l\)</span> means that the function values can change rapidly, leading to a wiggly function. A large <span class="math inline">\(l\)</span> means that the function changes slowly, leading to smoother functions. This parameter is essential for capturing the underlying smoothness in the data. 2. <strong>Variance</strong>: The variance parameter <span class="math inline">\(\sigma^2\)</span> determines the vertical scale of the functions. A larger <span class="math inline">\(\sigma^2\)</span> will lead to functions that vary more in amplitude.</p>
+<p>Where: <span class="math inline">\(x\)</span> and <span class="math inline">\(x'\)</span> are two points in the input space. <span class="math inline">\(\sigma^2\)</span> is the variance parameter, which controls the overall scale of the function. And <span class="math inline">\(l\)</span> is the lengthscale parameter, which determines how quickly the correlation between two points decays with distance.</p>
+<p>The EQ kernel has a few key properties and implications:</p>
+<ol type="1">
+<li><p><strong>Locality</strong>: The lengthscale <span class="math inline">\(l\)</span> determines how “local” the kernel is. A small <span class="math inline">\(l\)</span> means that the function values can change rapidly, leading to a wiggly function. A large <span class="math inline">\(l\)</span> means that the function changes slowly, leading to smoother functions. This parameter is essential for capturing the underlying smoothness in the data.</p></li>
+<li><p><strong>Variance</strong>: The variance parameter <span class="math inline">\(\sigma^2\)</span> determines the vertical scale of the functions. A larger <span class="math inline">\(\sigma^2\)</span> will lead to functions that vary more in amplitude.</p></li>
+</ol>
 <p>Let’s see an example to understand the concept better. Suppose we’re tracking the gene expression levels of a particular gene in a cell line over time. Our measurements are taken at three time points following a stimulus: <span class="math inline">\(t_1 = 1\)</span> (1 hour post-stimulus), <span class="math inline">\(t_2 = 2\)</span> (2 hours post-stimulus), and <span class="math inline">\(t_3 = 4\)</span> (4 hours post-stimulus). We want to calculate the covariance between these time points using the EQ kernel to understand how the expression levels of this gene are correlated over time.</p>
-<p>Recall the EQ kernel formula: <span class="math display">\[k(t, t') = \sigma^2 \exp\left(-\frac{(t - t')^2}{2l^2}\right)\]</span></p>
 <p>Let’s assume <span class="math inline">\(\sigma^2 = 1\)</span> and <span class="math inline">\(l = 2\)</span> (meaning we expect the gene expression to have a consistent change over a 2-hour period).</p>
 <ol type="1">
 <li><strong>Covariance between 1 hour and 2 hours post-stimulus</strong>: <span class="math display">\[k(t_1, t_2) = \exp\left(-\frac{(1 - 2)^2}{2(2^2)}\right) = \exp(-0.125) \approx 0.883\]</span></li>
@@ -1506,7 +1509,7 @@ converting to numeric...</code></pre>
 </div>
 </div>
 <p>The plot shows the pattern that we have added to some of features in each modalities. We are now going to change the prior of our GFA:</p>
-<div class="cell" data-hash="mofa_cache/html/unnamed-chunk-30_ce3648d0fcbed95ac45a75ec6299055b">
+<div class="cell" data-hash="mofa_cache/html/unnamed-chunk-30_d83c4f7af31b89d9911a58e5edb86726">
 <div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Fix the random seed for reproducibility</span></span>
 <span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">100</span>)</span>
 <span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1649,8 +1652,8 @@ Chain 1: ------------------------------------------------------------
 Chain 1: 
 Chain 1: 
 Chain 1: 
-Chain 1: Gradient evaluation took 0.010066 seconds
-Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 100.66 seconds.
+Chain 1: Gradient evaluation took 0.008899 seconds
+Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 88.99 seconds.
 Chain 1: Adjust your expectations accordingly!
 Chain 1: 
 Chain 1: 
@@ -1691,8 +1694,8 @@ Chain 1: ------------------------------------------------------------
 Chain 1: 
 Chain 1: 
 Chain 1: 
-Chain 1: Gradient evaluation took 0.018808 seconds
-Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 188.08 seconds.
+Chain 1: Gradient evaluation took 0.021643 seconds
+Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 216.43 seconds.
 Chain 1: Adjust your expectations accordingly!
 Chain 1: 
 Chain 1: 
@@ -2007,7 +2010,7 @@ Saving model in /var/folders/kh/tgq9mmld6_v9z_h220trj0c40000gn/T//RtmpCXEvxb/mof
 </div>
 </div>
 <p>Given this, the main question is if MOFA has been successful in capturing the variables reflecting the trend? We know exactly what variables we changed so we can compare it to what MOFA has found.</p>
-<div class="cell" data-hash="mofa_cache/html/unnamed-chunk-36_30b02aa9e1a1227a314f278542dc8ae8">
+<div>
 <div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the weights of the top 20 features for the third factor</span></span>
 <span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a>color_mirna<span class="ot">=</span><span class="fu">data.frame</span>(<span class="at">feature=</span><span class="fu">rownames</span>(MOFAobject<span class="sc">@</span>data<span class="sc">$</span>mirna<span class="sc">$</span>group1),</span>
@@ -2020,17 +2023,21 @@ Saving model in /var/folders/kh/tgq9mmld6_v9z_h220trj0c40000gn/T//RtmpCXEvxb/mof
 <span id="cb81-10"><a href="#cb81-10" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb81-11"><a href="#cb81-11" aria-hidden="true" tabindex="-1"></a><span class="fu">features_metadata</span>(sm)<span class="ot">&lt;-</span><span class="fu">rbind</span>(color_mirna,color_mrna,color_protein)</span>
 <span id="cb81-12"><a href="#cb81-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb81-13"><a href="#cb81-13" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_weights</span>(sm, <span class="at">factors =</span> <span class="dv">1</span>, <span class="at">view =</span> <span class="st">"mirna"</span>, <span class="at">nfeatures =</span> <span class="dv">20</span>,<span class="at">color_by =</span> <span class="st">"sinusoidal"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"miRNA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
+<span id="cb81-13"><a href="#cb81-13" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_weights</span>(sm, <span class="at">factors =</span> <span class="dv">1</span>, <span class="at">view =</span> <span class="st">"mirna"</span>, <span class="at">nfeatures =</span> <span class="dv">20</span>,<span class="at">color_by =</span> <span class="st">"sinusoidal"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"miRNA"</span>)</span>
+<span id="cb81-14"><a href="#cb81-14" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_weights</span>(sm, <span class="at">factors =</span> <span class="dv">1</span>, <span class="at">view =</span> <span class="st">"mrna"</span>, <span class="at">nfeatures =</span> <span class="dv">25</span>,<span class="at">color_by =</span> <span class="st">"sinusoidal"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"mRNA"</span>)</span>
+<span id="cb81-15"><a href="#cb81-15" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_weights</span>(sm, <span class="at">factors =</span> <span class="dv">1</span>, <span class="at">view =</span> <span class="st">"protein"</span>, <span class="at">nfeatures =</span> <span class="dv">15</span>,<span class="at">color_by =</span> <span class="st">"sinusoidal"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"protein"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell quarto-layout-panel" data-hash="mofa_cache/html/unnamed-chunk-36_96e288ab96dadd262db7ca41a9de3168">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
 <p><img src="mofa_files/figure-html/unnamed-chunk-36-1.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_weights</span>(sm, <span class="at">factors =</span> <span class="dv">1</span>, <span class="at">view =</span> <span class="st">"mrna"</span>, <span class="at">nfeatures =</span> <span class="dv">25</span>,<span class="at">color_by =</span> <span class="st">"sinusoidal"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"mRNA"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
 <p><img src="mofa_files/figure-html/unnamed-chunk-36-2.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_weights</span>(sm, <span class="at">factors =</span> <span class="dv">1</span>, <span class="at">view =</span> <span class="st">"protein"</span>, <span class="at">nfeatures =</span> <span class="dv">15</span>,<span class="at">color_by =</span> <span class="st">"sinusoidal"</span>)<span class="sc">+</span><span class="fu">ggtitle</span>(<span class="st">"protein"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
 <p><img src="mofa_files/figure-html/unnamed-chunk-36-3.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 </div>
 </div>
 <p>The plot above shows the weights of each feature on the x-axis and its ranking on the y-axis. What this plot shows us is that all top features selected by MOFA are in fact the ones we added the trend to. So MOFA has been almost perfectly successful in extracting the underlining pattern and important features. After getting the important features the rest of the analysis is more or less similar to classical data integration. In addition, similar kind of analysis can be performed on spatial data. For more information visit <a href="https://biofam.github.io/MOFA2/MEFISTO.html">https://biofam.github.io/MOFA2/MEFISTO.html</a></p>
