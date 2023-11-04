@@ -550,7 +550,7 @@ canonical_vars_X2 <- X_centered %*% U
 canonical_vars_Y2 <- Y_centered %*% V
 
 par(mfrow=c(2,2))
-plot(canonical_vars_X,canonical_vars_X2,col=breast.TCGA$data.train$subtype,xlab="l1",ylab="l2",main="CCA protein")
+plot(canonical_vars_X,canonical_vars_X2,col=breast.TCGA$data.train$subtype,xlab="l1",ylab="l2",main="CCA mRNA")
 plot(canonical_vars_Y,canonical_vars_Y2,col=breast.TCGA$data.train$subtype,xlab="l1",ylab="l2",main="CCA protein")
 
 plot(canonical_vars_X,canonical_vars_Y,col=breast.TCGA$data.train$subtype,xlab="mRNA",ylab="protein",main="l1")
@@ -1475,19 +1475,19 @@ Given this, the main question is if MOFA has been successful in capturing the va
 #| layout-ncol: 3
 # Plot the weights of the top 20 features for the third factor
 
-color_mirna=data.frame(feature=rownames(MOFAobject@data$mirna$group1),
-                       sinusoidal=rep(c("Yes","No"),c(20,nrow(MOFAobject@data$mirna$group1)-20)),
+color_mirna=data.frame(feature=rownames(sm@data$mirna$group1),
+                       sinusoidal=rep(c("Yes","No"),c(20,nrow(sm@data$mirna$group1)-20)),
                        view="mirna")
-color_mrna=data.frame(feature=rownames(MOFAobject@data$mrna$group1),
-                      sinusoidal=rep(c("Yes","No"),c(25,nrow(MOFAobject@data$mrna$group1)-25)),
+color_mrna=data.frame(feature=rownames(sm@data$mrna$group1),
+                      sinusoidal=rep(c("Yes","No"),c(25,nrow(sm@data$mrna$group1)-25)),
                       view="mrna")
-color_protein=data.frame(feature=rownames(MOFAobject@data$protein$group1),sinusoidal=rep(c("Yes","No"),c(15,nrow(MOFAobject@data$protein$group1)-15)),view="protein")
+color_protein=data.frame(feature=rownames(sm@data$protein$group1),sinusoidal=rep(c("Yes","No"),c(15,nrow(sm@data$protein$group1)-15)),view="protein")
 
 features_metadata(sm)<-rbind(color_mirna,color_mrna,color_protein)
 library(ggplot2)
-plot_weights(sm, factors = 1, view = "mirna", nfeatures = 20,color_by = "sinusoidal")+ggtitle("miRNA")
-plot_weights(sm, factors = 1, view = "mrna", nfeatures = 25,color_by = "sinusoidal")+ggtitle("mRNA")
-plot_weights(sm, factors = 1, view = "protein", nfeatures = 15,color_by = "sinusoidal")+ggtitle("protein")
+plot_weights(sm, factors = 3, view = "mirna", nfeatures = 20,color_by = "sinusoidal")+ggtitle("miRNA")
+plot_weights(sm, factors = 3, view = "mrna", nfeatures = 25,color_by = "sinusoidal")+ggtitle("mRNA")
+plot_weights(sm, factors = 3, view = "protein", nfeatures = 15,color_by = "sinusoidal")+ggtitle("protein")
 
 ```
 
