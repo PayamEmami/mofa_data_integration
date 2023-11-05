@@ -1,38 +1,66 @@
 ---
 title: "Multi-Omics Factor Analysis (MOFA)"
 author: "Payam Emami"
-format: html
-editor: visual
+format:
+  html:
+    code-link: false
+    toc: true
+    toc-depth: 4
+    toc-expand: 3
+    editor: visual
+title-block-banner: true
+subtitle: Detailed Version
 editor_options: 
   chunk_output_type: console
 ---
 
-# Setting up envrionment
+Setting up environment
 
-You will need to install a few packages to fully run this notebook. The main needed package is `MOFA2` and `ggplot2` but in order to run bayesian modeling you will need to install `rstan`. I good place to start is probably here: <https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started>
+You will need to install a few packages to fully run this notebook. The main packages needed are `MOFA2` and `ggplot2` but in order to run Bayesian modeling you will need to install `rstan`. A good place to start with `rstan` installation is here: <https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started>
 
-```{r,eval=FALSE}
+```{r, eval=FALSE}
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 BiocManager::install("MOFA2")
-# List of packages to be installed
+
+# list of packages to be installed
 packages <- c("rstan","ggplot2")
 
-# Check and install missing packages
+# check and install missing packages
 new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
 if(length(new_packages)) install.packages(new_packages, dependencies = TRUE, type = "binary")
-
 
 ```
 
 # Introduction
 
-In classical data integration, we would like to use information across different modalities (eg., transcriptome, proteome and metabolome) to gain more comprehensive insights into the biological systems under study. This type of data can be used for an array of different purposes including but not limited to molecular classification, stratification of patients, outcome predictions and understanding of regulatory processes such as gene regulation and pathway analysis.
+In classical data integration, we would like to use information across different modalities (e.g. transcriptome, proteome and metabolome) to gain more comprehensive insights into the biological systems under study. This type of data can be used for an array of different purposes including but not limited to molecular classification, stratification of patients, outcome predictions and understanding of regulatory processes such as gene regulation and pathway analysis.
 
 In this specific context, we are going to focus on unsupervised modeling and segmentation, which are promising because each type of omics data may contribute valuable information to the overall understanding of complex biological systems. By leveraging unsupervised modeling, we can uncover hidden patterns and relationships within the data without relying on predefined labels. This is especially beneficial when dealing with omics data, where the volume and complexity can be overwhelming. Furthermore, segmentation allows us to group similar data points, making it easier to identify and analyze specific subsets of the data. Given the heterogeneous nature of omics data, integrating multiple types can provide a more comprehensive view of the underlying biological processes.
 
-In this lab we are going to learn the basics of how Multi-Omics Factor Analysis (MOFA) uses multiple data views to uncover hidden but common pattern within the data. Before start using MOFA we are going to learn a few background concepts to understand and appreciate how this technique works. Let's start with typical PCA.
+In this lab we are going to learn the basics of how Multi-Omics Factor Analysis (MOFA) uses multiple data views to uncover hidden but common pattern within the data. Before start using MOFA we are going to learn a few background concepts to understand and appreciate how this technique works. Let's start with a typical PCA.
+
+# Data
+
+We will use TCGA data set from `mixOmics`, where features are in the columns and samples in the rows.
+
+> *This data set is a small subset of the full data set from The Cancer Genome Atlas. It contains the expression or abundance of three matching omics data sets: mRNA, miRNA and proteomics for 150 breast cancer samples (with three molecular subtypes of breast cancer: Basal, Her2, Luminal A) in the training set, and 70 samples in the test set. The test set is missing the proteomics data set.*
+
+```{r, message=FALSE}
+# download the dataset
+download.file("https://github.com/mixOmicsTeam/mixOmics/raw/master/data/breast.TCGA.rda", destfile = "TCGA.rda")
+
+# load the data
+load("TCGA.rda")
+```
+
+This data, when loaded, has already been split into a list with two elements: training and testing. The first element (training) contains four elements, again lists, containing miRNA, mRNA, proteomics and cancer molecular subtypes. The second element (testing) contains three lists holding miRNA, mRNA and molecular subtypes data (proteomics data are missing here).
+
+```{r}
+# preview data
+str(breast.TCGA)
+```
 
 # PCA
 
@@ -46,7 +74,7 @@ PCA simplifies this complex, multidimensional space by identifying the "principa
 
 For example, the first principal component (PC) might represent a combination of genes that change the most across all individuals. It could capture a general trend in gene expression that separates individuals based on age or response to a treatment. The second PC (orthogonal to the first), might capture the next highest variance, showing another layer of structure in the data, and so on.
 
-Formally,PCA is derived from the right singular vectors contained in matrix $V$. The singular values in $\Sigma$ are related to the eigenvalues of the covariance matrix of the original data, and they indicate the amount of variance captured by each principal component.
+Formally, PCA is derived from the right singular vectors contained in matrix $V$. The singular values in $\Sigma$ are related to the eigenvalues of the covariance matrix of the original data, and they indicate the amount of variance captured by each principal component.
 
 In simpler terms, when we perform SVD on a data matrix $A$, the columns of $V$ (the right singular vectors) are actually the principal components of $A$. The singular values in $\Sigma$ tell us the importance or weight of these principal components.
 
@@ -61,8 +89,7 @@ $$ where
 \- $V \in \mathbb{R}^{n \times n}$ is the right singular matrix.
 
 To see this connection clearly, let's consider the covariance matrix of $A$, denoted as $C$: $$
-C = \frac{1}{n-1} A^T A
-$$
+C = \frac{1}{n-1} A^T A$$
 
 When we perform eigen decomposition on $C$, we get: $$
 C = W \Lambda W^T
@@ -71,62 +98,49 @@ $$ where $W$ contains the eigenvectors and $\Lambda$ is a diagonal matrix contai
 Now, if we look at the SVD of $A$ again: $$
 A = U \Sigma V^T
 $$ and compute $A^T A$, we get: $$
-A^T A = V \Sigma^T U^T U \Sigma V^T = V \Sigma^2 V^T
-$$
+A^T A = V \Sigma^T U^T U \Sigma V^T = V \Sigma^2 V^T$$
 
 Comparing this with the eigen decomposition of $C$, we observe that the right singular vectors $V$ are the eigenvectors of $C$, and the singular values squared in $\Sigma^2$ are the eigenvalues in $\Lambda$.
 
-#### 
-
 There are other algorithms for doing PCA for example using power methods but almost all of them will converge to the same solution with a certain numerical accuracy.
 
-## PCA in practice
+## PCA in R
 
-### Data
-
-Our data has to be in a data.frame where features are in the columns and samples in the rows. For now we are going to use TCGA dataset from mixOmics.
-
-> *This data set is a small subset of the full data set from The Cancer Genome Atlas that can be analysed with the DIABLO framework. It contains the expression or abundance of three matching omics data sets: mRNA, miRNA and proteomics for 150 breast cancer samples (Basal, Her2, Luminal A) in the training set, and 70 samples in the test set. The test set is missing the proteomics data set.*
-
-```{r,message=FALSE}
-# Download the dataset
-download.file("https://github.com/mixOmicsTeam/mixOmics/raw/master/data/breast.TCGA.rda", destfile = "TCGA.rda")
-
-# load the data
-load("TCGA.rda")
-```
-
-This data has already been split into a list with two elements. Training and testing. Each element itself is a list of four elements. Three elements are the actual datasets and one is the cancer subtypes.
+Doing PCA in R using SVD is straight forward. We center our data and use the `svd` function.
 
 ```{r}
-str(breast.TCGA)
-```
+#| fig-width: 6
+#| fig-height: 6
+#| fig-align: center
 
-### PCA in R
-
-Doing PCA in R using SVD is straight forward. We should just center our data and use the `svd` function.
-
-```{r}
 # center the data
 data_centered_mrna <- scale(breast.TCGA$data.train$mrna,center = TRUE,scale = FALSE)
+
 # do SVD
 svd_mrna <- svd(data_centered_mrna)
+
 # calculate the PC scores
 calculated_scores <- data_centered_mrna%*%svd_mrna$v
+
 # plot the PC scores
 plot(calculated_scores[,1:2],xlab="pc1",ylab="pc2",col=breast.TCGA$data.train$subtype)
 ```
 
-This will give us identical results comapred to the for example standard `prcomp` function
+This will give us identical results compared to the for example standard `prcomp` function
 
 ```{r}
-# do pca using prcomp
+#| fig-width: 6
+#| fig-height: 6
+#| fig-align: center
+
+# do PCA using prcomp
 pca_prcomp <- prcomp(data_centered_mrna)
+
 # plot the PCA
 plot(pca_prcomp$x[,1:2],xlab="pc1",ylab="pc2",col=breast.TCGA$data.train$subtype)
 ```
 
-In practice there are more specialized packages that can be used to do PCA. `mixOmics` provides a very powerful PCA method that provide us not only with standard PCA but also with extra advantange (eg., missing value handling, plotting, handling repeated measurements etc).
+In practice there are more specialized packages that can be used to do PCA. For instance `mixOmics` provides a very powerful PCA method that provide us not only with standard PCA but also with extra advantages (e.g. missing value handling, plotting, handling repeated measurements etc.). See Data Integration using mixOmics labs for some examples.
 
 This observed separation and overlap in the PCA plot is not just a graphical representation but is rooted in the underlying biology of these cancer subtypes. The positioning of the different groups on the PCA plot is influenced by the expression levels of various mRNAs, each contributing differently to the principal components.
 
@@ -135,27 +149,32 @@ Now, as we go deeper into understanding the PCA plot, it becomes essential to ex
 We can go ahead and plot the loadings. We start with our most important PC, that is PC1
 
 ```{r}
-# loadings for component 1
+#| fig-height: 7
+#| fig-align: center
 
+# loadings for component 1
 loadings <- pca_prcomp$rotation[,1]
 
-# Sort the loadings
+# sort the loadings
 sorted_loadings <- loadings[order(abs(loadings),decreasing = T)]
 
-# Plot the loadings in a flipped barplot
-barplot(sorted_loadings, horiz=TRUE, las=1, main="PCA Loadings", xlab="Loadings", border="blue", col="skyblue")
+# plot the loadings in a flipped bar plot
+par(mar = c(3, 6, 3, 2))
+barplot(sorted_loadings, horiz=TRUE, las=1, 
+        main="PCA Loadings", xlab="Loadings", 
+        border="blue", col="skyblue")
 
 ```
 
-In this bar plot, each bar represents a specific mRNA. The length of the bar corresponds to the value of the loading of that mRNA on PC1, indicating its contribution to this principal component. The mRNAs with the highest absolute contributions are at the bottom, and those with the lowest are at the top, making it easy to identify the most influential mRNAs. Both the length and direction of each bar provide crucial insights into the mRNA's contribution to the first principal component (PC1). The length of the bar signifies the magnitude of the mRNA's contribution. Longer bars indicate miRNAs that have a more substantial influence on the variance captured by PC1, highlighting them as key elements in distinguishing different patterns of gene expression within the dataset.
+In this bar plot, each bar represents a specific mRNA. **The length of the bar** corresponds to the value of the loading of that mRNA on PC1, indicating its contribution to this principal component. The mRNAs with the highest absolute contributions are at the bottom, and those with the lowest are at the top, making it easy to identify the most influential mRNAs. Both the length and direction of each bar provide crucial insights into the mRNA's contribution to the first principal component (PC1). The length of the bar signifies the magnitude of the mRNA's contribution. Longer bars indicate miRNAs that have a more substantial influence on the variance captured by PC1, highlighting them as key elements in distinguishing different patterns of gene expression within the dataset.
 
-The direction of the bars adds another layer of interpretation. Bars extending to the right represent mRNAs that are positively correlated with PC1, indicating that as the values of these mRNAs increase, so does the score of PC1. Conversely, bars extending to the left suggest a negative correlation, meaning as the values of these miRNAs increase, the score of PC1 decreases. This directional information can be important in understanding the expression patterns of mRNAs in different breast cancer subtypes. For instance, mRNAs that are positively correlated with PC1 might be highly expressed in the Basal subtype but low in others, offering insights into the molecular distinctions between these cancer subtypes.
+**The direction of the bar** adds another layer of interpretation. Bars extending to the right represent mRNAs that are positively correlated with PC1, indicating that as the values of these mRNAs increase, so does the score of PC1. Conversely, bars extending to the left suggest a negative correlation, meaning as the values of these miRNAs increase, the score of PC1 decreases. This directional information can be important in understanding the expression patterns of mRNAs in different breast cancer subtypes. For instance, mRNAs that are positively correlated with PC1 might be highly expressed in the Basal subtype but low in others, offering insights into the molecular distinctions between these cancer subtypes.
 
-Score plot together with loading give us powerful tool to investiage pattern in a single dataset.
+Score plot together with loading give us powerful tool to investigate pattern in a single dataset.
 
 ## Probabilistic Principal Component Analysis (PPCA)
 
-After understanding the foundation of PCA, it's time to explore its probabilistic counterpart, Probabilistic Principal Component Analysis (PPCA). While PCA provides us with a deterministic approach to do data reduction and feature extraction, PPCA introduces a probabilistic framework that models the uncertainties in the data. This transition from a deterministic method to a more flexible, probabilistic one allows for a more systematic understanding of data structures, especially when there's noise or missing values.
+After understanding the foundation of PCA, it is time to explore its probabilistic counterpart that is Probabilistic Principal Component Analysis (PPCA). While PCA provides us with a deterministic approach to do data reduction and feature extraction, PPCA introduces a probabilistic framework that models the uncertainties in the data. This transition from a deterministic method to a more flexible, probabilistic one allows for a more systematic understanding of data structures, especially when there is noise or missing values.
 
 In PPCA, the relationship between the observed data vector \$Y \$in $\mathbb{R}^{D}$ and the latent or principal component coordinates $Z$ in $\mathbb{R}^{d}$ is expressed by:
 
@@ -167,9 +186,9 @@ Given our equation, we start with a prior on the latent variables, $Z$, assuming
 
 Given the linear relationship $Y = ZW^T + \epsilon$, the conditional distribution of $X$ given $Z$ is $p(X|Z) = N(X; ZW^T, \sigma^2 I)$ This equation suggests that the observed data $X$ is normally distributed around the value produced by projecting $Z$ onto the data space using $W^T$, with a variance of $\sigma^2$.
 
-Remembre now our observed data is $X$ but what we are interested in is $Z$ so we need to calculate $$ p(Z|X)$$. Therefore using the Bayes' rule for Gaussian distributions:
+Remember now that our observed data is $X$ but what we are interested in is $Z$ so we need to calculate $$ p(Z|X)$$. Therefore using the Bayes' rule for Gaussian distributions:
 
-$$p(z|x) = \frac{p(x|z) \cdot p(z)}{p(x)}$$ We don't need the denominator $p(x)$ explicitly as it's a normalization constant.
+$$p(z|x) = \frac{p(x|z) \cdot p(z)}{p(x)}$$ We do not need the denominator $p(x)$ explicitly as it is a normalization constant.
 
 $$ p(z|x) \propto p(x|z) \cdot p(z) $$ In the above equation $p(z|x)$ is normally distributed thus
 
@@ -177,15 +196,10 @@ $$
 p(z|x)=N(z,\mu,\Sigma)
 $$
 
-It can be shown that
-
-$$
+It can be shown that $$
 \mu=\sigma^{-2}\Sigma Wx
 $$ and $$
-\Sigma^{-1}=I+\sigma^{-2}CC^T
-$$
-
-To estimate the model parameters, namely $W$ and $\sigma^2$, we employ the Expectation-Maximization (EM) algorithm. This iterative algorithm seeks to maximize the likelihood of observing the data $x$ given the model parameters.
+\Sigma^{-1}=I+\sigma^{-2}CC^T$$ To estimate the model parameters, namely $W$ and $\sigma^2$, we employ the Expectation-Maximization (EM) algorithm. This iterative algorithm seeks to maximize the likelihood of observing the data $x$ given the model parameters.
 
 The EM algorithm consists of two main steps:
 
@@ -197,59 +211,42 @@ One challenge in directly maximizing the log-likelihood $log p(x)$ (which quanti
 
 Our goal is to express the log marginal likelihood, $\log p(X)$, in terms of some function involving $q(Z)$. The marginal likelihood is defined as:
 
-$$p(X) = \int p(X, Z) dZ$$
-The marginal likelihood represents the probability of the observed data under a particular model, marginalized (or summed/integrated) over all possible values of the latent variables or parameters. So essentially, we're adding up the likelihood of the data $X$ for each possible value or configuration of $Z$.
+$$p(X) = \int p(X, Z) dZ$$ The marginal likelihood represents the probability of the observed data under a particular model, marginalized (or summed/integrated) over all possible values of the latent variables or parameters. So essentially, we are adding up the likelihood of the data $X$ for each possible value or configuration of $Z$.
 
-Unfortunate, the integral over $Z$ can make the optimization intractable. So we are going to use $q(Z)$ which is chosen from a family of distributions that are tractable and easy to work with. The goal here is to find an approximation to the true but intractable posterior $p(Z|X)$. To introduce $q(Z)$ into our equation, we multiply the inside of the integral by $q(Z)$ and divide by $q(Z)$. Remember, any number divided by itself is 1 (obviously!), so this step is essentially multiplying by 1 (which doesn't change the value of the integral).
+Unfortunate, the integral over $Z$ can make the optimization intractable. So we are going to use $q(Z)$ which is chosen from a family of distributions that are tractable and easy to work with. The goal here is to find an approximation to the true but intractable posterior $p(Z|X)$. To introduce $q(Z)$ into our equation, we multiply the inside of the integral by $q(Z)$ and divide by $q(Z)$. Remember, any number divided by itself is 1 (obviously!), so this step is essentially multiplying by 1 (which does not change the value of the integral).
 
-$$p(X) = \int p(X, Z) \times \frac{q(Z)}{q(Z)} dZ$$
-If we expand the equation we get:
+$$p(X) = \int p(X, Z) \times \frac{q(Z)}{q(Z)} dZ$$ If we expand the equation we get:
 
-$$p(X) = \int q(Z) \times \frac{p(X, Z)}{q(Z)} dZ$$
-Now things become much easier. The first thing we want to do is to work on $log p$ instead of probabilities. So we'll take the logarithm of both sides:
+$$p(X) = \int q(Z) \times \frac{p(X, Z)}{q(Z)} dZ$$ Now things become much easier. The first thing we want to do is to work on $log p$ instead of probabilities. So we will take the logarithm of both sides:
 
-$$\log p(X) = \log \int q(Z) \frac{p(X, Z)}{q(Z)} dZ$$
-However, we are still dealing with a complex log of integrals. What we want to do is to move the log inside the integral so that we can simplify the integrand, making the integration more tractable.
+$$\log p(X) = \log \int q(Z) \frac{p(X, Z)}{q(Z)} dZ$$ However, we are still dealing with a complex log of integrals. What we want to do is to move the log inside the integral so that we can simplify the integrand, making the integration more tractable.
 
 Since log is concave, we can use Jensen's inequality, $f(E[X]) \geq E[f(X)]$. Jensen's inequality essentially says that for a concave function, the function of an average is always greater than or equal to the average of the function. In the context of our expression, it allows us to move the logarithm inside the integral:
 
-$$\log p(X) \geq \int q(Z) \log \frac{p(X, Z)}{q(Z)} dZ$$ 
-Expanding the logarithm of the fraction:
-$$\log p(X) \geq \int q(Z) [\log p(X, Z) - \log q(Z)] dZ$$
+$$\log p(X) \geq \int q(Z) \log \frac{p(X, Z)}{q(Z)} dZ$$ Expanding the logarithm of the fraction: $$\log p(X) \geq \int q(Z) [\log p(X, Z) - \log q(Z)] dZ$$
 
-This is simply using the logarithmic property:
-$$\log \frac{a}{b} = \log a - \log b$$
+This is simply using the logarithmic property: $$\log \frac{a}{b} = \log a - \log b$$
 
-Now, we separate the integrals:
-$$\log p(X) \geq \int q(Z) \log p(X, Z) dZ - \int q(Z) \log q(Z) dZ$$
+Now, we separate the integrals: $$\log p(X) \geq \int q(Z) \log p(X, Z) dZ - \int q(Z) \log q(Z) dZ$$
 
-The two integrals represent two terms:
-1. The first integral $\int q(Z) \log p(X, Z) dZ$ represents the expected joint log-likelihood of the data and the latent variables, when the expectation is taken with respect to $q(Z)$.
+The two integrals represent two terms: 1. The first integral $\int q(Z) \log p(X, Z) dZ$ represents the expected joint log-likelihood of the data and the latent variables, when the expectation is taken with respect to $q(Z)$.
 
-2. The second integral $\int q(Z) \log q(Z) dZ$represents the entropy of the variational distribution $q(Z)$.
+2.  The second integral $\int q(Z) \log q(Z) dZ$ represents the entropy of the variational distribution $q(Z)$.
 
-Using the definition of expectation, the first integral is:
-$$E_q[\log p(X, Z)]$$
-And breaking down the joint probability using the definition of conditional probability:
-$$E_q[\log p(X, Z)] = E_q[\log p(Z) + \log p(X|Z)]$$
+Using the definition of expectation, the first integral is: $$E_q[\log p(X, Z)]$$ And breaking down the joint probability using the definition of conditional probability: $$E_q[\log p(X, Z)] = E_q[\log p(Z) + \log p(X|Z)]$$
 
-The second integral, as mentioned, is just the negative entropy:
-$$-H(q(Z))$$
+The second integral, as mentioned, is just the negative entropy: $$-H(q(Z))$$
 
-Combining these terms, we get:
-$$\log p(X) \geq E_q[\log p(Z) + \log p(X|Z)] - H(q(Z))$$
+Combining these terms, we get: $$\log p(X) \geq E_q[\log p(Z) + \log p(X|Z)] - H(q(Z))$$
 
-Which we can rearrange to:
-$$\log p(X) \geq H(q(Z)) + E_q[\log p(Z) + \log p(X|Z)]$$
-The right-hand side of the inequality is the ELBO (Evidence Lower BOund (ELBO)), which we try to maximize. The entropy term quantifies the uncertainty associated with the distribution and the other term is the expected joint log-likelihood of the data and latent variables under the variational distribution
+Which we can rearrange to: $$\log p(X) \geq H(q(Z)) + E_q[\log p(Z) + \log p(X|Z)]$$ The right-hand side of the inequality is the ELBO (Evidence Lower BOund (ELBO)), which we try to maximize. The entropy term quantifies the uncertainty associated with the distribution and the other term is the expected joint log-likelihood of the data and latent variables under the variational distribution.
 
 Anyway, given the likelihood function we can now derive our E and M steps of EM.
 
 We can simply look at what we derived for $p(z|x)$ which was: $$
 \mu=\sigma^{-2}\Sigma Wx
 $$ and $$
-\Sigma^{-1}=I+\sigma^{-2}CC^T
-$$
+\Sigma^{-1}=I+\sigma^{-2}CC^T$$
 
 We can just replace the values to get to expected value of $Z$
 
@@ -285,66 +282,75 @@ Here: $N$ represents the number of data points. $D$ is the dimension of the data
 
 This equation represents the EM bound after performing the M-step. The objective in the M-step of the EM algorithm is to maximize this bound with respect to the model parameters $W$ and $\sigma^2$. By doing so, we iteratively refine our model to better fit the observed data.
 
-Let's try to implement it:
+### PPCA R implementation
+
+Let's try to implement the above in R:
 
 ```{r}
-# Load the breast cancer dataset for training
+#| fig-height: 6
+#| fig-width: 6
+#| fig-align: center
+#| message: false
+#| warning: false
+#| error: false
+
+# load the breast cancer dataset for training
 input_data <- breast.TCGA$data.train$mrna
 
-# Define the number of data points (samples) and the dimensionality of the data (genes/features)
+# define the number of data points (samples) and the dimensionality of the data (genes/features)
 N_data <- nrow(input_data)
 D_data <- ncol(input_data)
 
-# Define the number of principal components to be extracted
+# define the number of principal components to be extracted
 nPcs <- 2
 
-# Define the convergence threshold and maximum number of iterations for the EM algorithm
+# define the convergence threshold and maximum number of iterations for the EM algorithm
 threshold <- 0.0001
 maxIterations <- 100
 
-# Set a seed for reproducibility
+# set a seed for reproducibility
 set.seed(123)
 
-# Initialization: Randomly initialize the W matrix from the data
+# initialization: randomly initialize the W matrix from the data
 W <- t(input_data[sample(N_data, size = nPcs), , drop = FALSE])
 W <- matrix(rnorm(length(W)), nrow(W), ncol(W))
 
-# Precompute W'W for efficiency
+# precompute W'W for efficiency
 WtW <- crossprod(W)
 
-# Compute the latent representation Z based on the initial W
+# compute the latent representation Z based on the initial W
 Z <- input_data %*% W %*% solve(WtW)
 
-# Calculate the initial reconstruction and its error
+# calculate the initial reconstruction and its error
 reconstructed <- Z %*% t(W)
 error_ss <- sum((reconstructed - input_data)^2) / (N_data * D_data)
 
-# Initialize the iteration counter and the previous objective value for convergence checking
+# initialize the iteration counter and the previous objective value for convergence checking
 iteration <- 1
 previous <- Inf
 
-# Start the EM algorithm
+# start the EM algorithm
 while (TRUE) {
-  # E-Step: Estimate the covariance of the latent variable Z
+  # E-Step: estimate the covariance of the latent variable Z
   Z_cov <- solve(diag(nPcs) + WtW/error_ss)
   
-  # Compute the posterior mean of Z
+  # compute the posterior mean of Z
   Z <- input_data %*% W %*% Z_cov/error_ss
   ZtZ <- crossprod(Z)
   
-  # M-Step: Update W based on the estimated Z
+  # M-Step: update W based on the estimated Z
   W <- (t(input_data) %*% Z) %*% solve((ZtZ + N_data * Z_cov))
   WtW <- crossprod(W)
   
-  # Recalculate the reconstruction error based on the updated W
+  # recalculate the reconstruction error based on the updated W
   error_ss <- (sum((W %*% t(Z) - t(input_data))^2) + 
                  N_data * sum(WtW %*% Z_cov))/(N_data * D_data)
   
-  # Calculate the EM objective (the lower bound of the log-likelihood)
+  # calculate the EM objective (the lower bound of the log-likelihood)
   obj_val <- N_data * (D_data * log(error_ss) + 
                          sum(diag(Z_cov)) - log(det(Z_cov))) + sum(diag(ZtZ))
   
-  # Check for convergence
+  # check for convergence
   relative_change <- abs(1 - obj_val/previous)
   previous <- obj_val
   
@@ -355,14 +361,14 @@ while (TRUE) {
   } 
 }
 
-# Orthogonalize W for stability
+# orthogonalize W for stability
 W <- svd(W)$u
 
-# Recalculate eigenvalues and eigenvectors after orthogonalization
+# recalculate eigenvalues and eigenvectors after orthogonalization
 eig_vals <- eigen(cov(input_data %*% W))$values
 eig_vecs <- eigen(cov(input_data %*% W))$vectors
 
-# Update W based on the new eigenvectors
+# update W based on the new eigenvectors
 loadings <- W %*% eig_vecs
 scores <- input_data %*% loadings
 
@@ -395,7 +401,11 @@ We are going to assume that the approximate posterior factorizes across all the 
 
 The goal here is to minimize the KL divergence between the approximate posterior and the true posterior. This is equivalent to ELBO, which as said before provides a lower bound to the log marginal likelihood of the data. Using an iterative algorithm, we adjust the parameters of our mean-field distribution to maximize the ELBO (we saw in PPCA how ELBO is calculated). Common techniques include coordinate ascent or gradient-based methods can be used. Once the ELBO is maximized, the parameters of the factorized distributions give us the approximate posterior means and variances for $\mathbf{z}$, $\mathbf{W}$, $\tau$, and $\epsilon_n$. We can then use the estimated parameters to generate new data points, reconstruct the original data with reduced dimensions, or project new observations onto the principal components, thereby facilitating visualization, clustering, etc.
 
-R provides an excellent interface to Stan through the "rstan" package, allowing users to build, fit, and interrogate complex Bayesian models with ease. We are going to use rstan here. **You can run the script if you have succesfully installed rstan otherwise you can skip running the scripts**
+### BPCA R implementation
+
+R provides an excellent interface to Stan through the `rstan` package, allowing users to build, fit, and interrogate complex Bayesian models with ease. We are going to use `rstan` here. 
+
+*You can run the script if you have successfully installed `rstan` package otherwise you can skip running the scripts and continue reading.*
 
 ```{r,message=FALSE,warning=FALSE}
 # Load necessary libraries
@@ -470,13 +480,11 @@ If you remember, in the context of Bayesian analysis, we don't deal with point e
 
 We have now implemented a complete Bayesian PCA in R and Stan. Time to move towards integration using two data views only.
 
-# Canonical Correlation Analysis CCA (two datasets)
+# Canonical Correlation Analysis CCA (two data sets)
 
-Canonical Correlation Analysis (CCA) is similar to PCA with the capability to analyze multivariate correlations between two datasets. While PCA focuses on maximizing variance within a single dataset, CCA identifies linear combinations of variables from two datasets that are maximally correlated. It provides pairs of canonical variables and their associated canonical correlations, giving insights into the shared structure and relationships between datasets. This is particularly suited in multi-omics studies, where understanding the interplay between different types of biological data is crucial.
+Canonical Correlation Analysis (CCA) is similar to PCA with the capability to analyze multivariate correlations between two data sets. While PCA focuses on maximizing variance within a single dataset, CCA identifies linear combinations of variables from two data sets that are maximally correlated. It provides pairs of canonical variables and their associated canonical correlations, giving insights into the shared structure and relationships between data sets. This is particularly suited in multi-omics studies, where understanding the interplay between different types of biological data is crucial.
 
-## Mathematical Foundations
-
-CCA seeks to find pairs of linear combinations, one from each dataset, that are maximally correlated. If we have two datasets $X$ and $Y$, the canonical correlations are obtained by solving the optimization problem:
+CCA seeks to find pairs of linear combinations, one from each dataset, that are maximally correlated. If we have two data sets $X$ and $Y$, the canonical correlations are obtained by solving the optimization problem:
 
 $$
 \max_{a, b} \rho = \text{corr}(a^T X, b^T Y)
@@ -484,7 +492,7 @@ $$
 
 where $a$ and $b$ are the canonical weights, and $\rho$ is the canonical correlation.
 
-The cross-covariance matrix between $X$ and $Y$ plays a central role in calculating CCA weights. We compute it and then apply SVD to find the weights and correlations. The process is similar to performing SVD in PCA but extends to exploring relationships between two datasets.
+The cross-covariance matrix between $X$ and $Y$ plays a central role in calculating CCA weights. We compute it and then apply SVD to find the weights and correlations. The process is similar to performing SVD in PCA but extends to exploring relationships between two data sets.
 
 $$
 \text{SVD}(\Sigma_{XY}) = U \Lambda V^T
@@ -510,11 +518,13 @@ $$
 Y = Y-T_y(Y^TT_U(T^T_UT_U)^{-1})^T
 $$ The process is repeated to extract additional pairs of canonical variables.
 
+## CCA in R
 Let's have a look at how we can derive this in R using miRNA and mRNA data
-
 ```{r}
+#| fig-height: 8
+#| fig-align: center
 
-# center both of the datasets
+# center both of the data sets
 X_centered <- scale(breast.TCGA$data.train$mrna, scale = FALSE)
 Y_centered <- scale(breast.TCGA$data.train$protein, scale = FALSE)
 
@@ -559,7 +569,7 @@ plot(canonical_vars_X2,canonical_vars_Y2,col=breast.TCGA$data.train$subtype,xlab
 
 The plot above clearly shows that we ended up having a shared pattern in `l1` (first CCA component). L1 captures the primary mode of correlation between protein and mRNA expression data. It represents the linear combinations of protein and mRNAs that are most strongly correlated. Since our interest right now is in the suptypes, we can probably ignore the second latent factor but we might as well try to explaining based on some other factors.
 
-In the context of CCA, loadings play a role similar to that in PCA, yet they have a distinct interpretation. Similar to PCA, where loadings indicate the contribution of each original variable to the principal components, in CCA, the loadings show the contribution of each variable to the canonical variables. However, the difference lies in their meaning. While PCA loadings represent the contribution to the variance within a single dataset, CCA loadings show the contribution to the correlation between two datasets.
+In the context of CCA, loadings play a role similar to that in PCA, yet they have a distinct interpretation. Similar to PCA, where loadings indicate the contribution of each original variable to the principal components, in CCA, the loadings show the contribution of each variable to the canonical variables. However, the difference lies in their meaning. While PCA loadings represent the contribution to the variance within a single dataset, CCA loadings show the contribution to the correlation between two data sets.
 
 ## Bayesian Canonical Correlation Analysis (BCCA)
 
@@ -569,7 +579,7 @@ $$X = ZW_x^T + \epsilon_x$$ $$Y = ZW_y^T + \epsilon_y$$
 
 If you look a the equation we can see we have a shared latent factor ($Z$) but weights and noise are different across the dataset. So our latent factor $Z$ is going to capture the shared pattern using a global score and in addition the weights can be used to project the original data into data view specific scores.
 
-In BCCA also: 1. The latent variables $\mathbf z$ follow a standard normal distribution: $$ \mathbf z \sim \mathcal{N}(0, 1) $$ 2. The weight matrix for both datasets $\mathbf{W_{x,y}}$ also follows a standard normal distribution: $$ \mathbf{W_{x,y}} \sim \mathcal{N}(0, 1) $$
+In BCCA also: 1. The latent variables $\mathbf z$ follow a standard normal distribution: $$ \mathbf z \sim \mathcal{N}(0, 1) $$ 2. The weight matrix for both data sets $\mathbf{W_{x,y}}$ also follows a standard normal distribution: $$ \mathbf{W_{x,y}} \sim \mathcal{N}(0, 1) $$
 
 3.  The precision parameter $\tau_{x,y}$ follows a gamma distribution with parameters $\alpha_0$ and $\beta_0$: $$ \tau \sim \mathcal{G}(\alpha_0, \beta_0) $$
 
@@ -577,7 +587,9 @@ In BCCA also: 1. The latent variables $\mathbf z$ follow a standard normal distr
 
 5.  The observed data $\mathbf{x}_n$ and $\mathbf{y}_n$ follows a normal distribution with mean $\mathbf W_x\mathbf z_n$ and $\mathbf W_y\mathbf z_n$ and covariance $\tau_{x,y}^{-1}$ so $$ \mathbf{x}_n \sim \mathcal{N}(\mathbf W_x\mathbf z_n, \tau_x^{-1} \mathbf ) $$ and $$ \mathbf{y}_n \sim \mathcal{N}(\mathbf W_y\mathbf z_n, \tau_y^{-1} \mathbf ) $$.
 
-The rest of the optimization etc are similar to those of BPCA. Let's try to implement this:
+The rest of the optimization etc are similar to those of BPCA. 
+
+### BCCA R implementation
 
 ```{r}
 # Load the rstan library for Bayesian analysis using Stan
@@ -655,7 +667,7 @@ plot(scores_global, col=breast.TCGA$data.train$subtype, main="BCCA global", xlab
 
 ```
 
-Based on the scores, can we say if we have captured shared pattern between our datasets? **do A PCA on each of the datasets and comapre the results with what we got here**
+Based on the scores, can we say if we have captured shared pattern between our data sets? **do A PCA on each of the data sets and compare the results with what we got here**
 
 # Group Factor Analysis (GFA) Multi-Omics Factor Analysis (MOFA)
 
@@ -674,7 +686,9 @@ for $i = 1, 2, ..., k$, where:
 
 The objective of GFA is to find the common latent factor $Z$ and the individual loading matrices $W_i$ that best explain the variance in each of the data views while also capturing the shared information across all views.
 
-The rest of the equations and optimization is identical to those of BCCA. So given the new definition let's try to implement GFA in R using three data modalities (mRNA,protein and miRNA):
+The rest of the equations and optimization is identical to those of BCCA. So given the new definition let's try to implement GFA in R using three data modalities (mRNA, protein and miRNA).
+
+## GFA MOFA R implementation
 
 ```{r}
 
@@ -788,7 +802,7 @@ plot(scores_global, col=breast.TCGA$data.train$subtype, main="GFA global", xlab=
 
 In the code above, since Stan does not support ragged data structures (data structures with different lengths), we had to concatenate the data first, but then instruct Rstan to put different assumptions on different columns of the data depending on which modality it originates from.
 
-The results are more or less clear; we have captured the shared pattern across these three datasets.
+The results are more or less clear; we have captured the shared pattern across these three data sets.
 
 One more thing before talking about MOFA is that we have been omitting sparsity considerations in our model. Sparsity plays a crucial role in high-dimensional data analysis, ensuring that the model remains interpretable and avoids overfitting. Two popular approaches to incorporate sparsity are Automatic Relevance Determination (ARD) and the Spike-and-slab prior.
 
@@ -958,62 +972,95 @@ MOFA follows GFA under the hood but it also allows one to use different priors d
 
 # Data integration using MOFA2
 
+## Building and training the MOFA object
 In order to do data integration using MOFA we first have to construct a list of data matrices:
-
 ```{r}
-
+# load library
 library(MOFA2)
 
-# remove the subtype information
+# remove the subtype information from training data
 data_mofa <- breast.TCGA$data.train[-4]
-# we do transpose because mofa wants features in rows
-data_mofa <- lapply(data_mofa,t)
 
+# transpose data because MOFA wants features in rows
+data_mofa <- lapply(data_mofa, t)
 ```
 
 We can then use `create_mofa` to create a MOFA object:
-
 ```{r}
 MOFAobject <- create_mofa(data_mofa)
 ```
 
 We can have a look at the structure of the input data:
-
 ```{r}
+#| fig-align: center
 plot_data_overview(MOFAobject)
 ```
 
-This essentially shows us how many samples we have and how many features per data view is there. If there is missing values it will be shown as white lines. But we don't have missing values. **Can you add a bit of missing values and check how the plot will change?**
+This essentially shows us how many samples we have and how many features per data view is there. If there were missing values, these would be shown as white lines. 
 
-Before start modeling we should have a look at the distribution of the data to decide which distrubtion to use.
+::: {#exr-na}
+### NA
+Can you add a bit of missing values and check how the plot will change?
+:::
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+# Let's randomly introduce NAs to 20% of samples in one omics e.g. protein data
+# This is an example code. You can probably find an easier way to solve this :) 
+
+# make a copy of MOFA data and protein data
+data_mofa_with_na <- data_mofa
+data_protein <- data_mofa$protein
+
+# calculate number of data points to replace
+n <- ncol(data_protein) # no. of samples
+n_to_replace <- 20/100 * n # number to replace, 20%
+
+# sample index and replace with NA 
+data_protein[, sample(1:n, n_to_replace)] <- NA
+
+# check that we have NAs, we should have n_to_replace amount
+sum(is.na(data_protein))
+
+# replace protein data under the MOFA
+data_mofa_with_na$protein <- data_protein
+
+# create MOFA object
+MOFAobject_with_na <- create_mofa(data_mofa_with_na)
+
+# plot
+plot_data_overview(MOFAobject_with_na)
+```
+
+Before we start modeling we should have a look at the distribution of the data to decide which one to use.
+```{r}
+#| fig-align: center
+#| fig-height: 7
 par(mfrow=c(2,2))
 hist(data_mofa$mrna)
 hist(data_mofa$protein)
 hist(data_mofa$mirna)
-
 ```
 
-All of our data is normally distributed so we go for normal distribution. In practice MOFA allows us to select 'gaussian' for continuous data (e.g proteomics), 'bernoulli' for binary data (e.g. methylation) and 'poisson' for count data (e.g. RNA-Seq).
+All of our data is seems to be normally distributed so we use normal distribution. In practice MOFA allows us to select 'gaussian' for continuous data (e.g proteomics), 'bernoulli' for binary data (e.g. methylation) and 'poisson' for count data (e.g. RNA-Seq).
 
 We can now set the parameters and train the model:
-
 ```{r}
 model_opts <- get_default_model_options(MOFAobject)
 print(model_opts)
 ```
 
-We see that MOFA has select default (gaussian) likelyhood for all our data and include 15 factors (latent variables). It does not do Spike and Slap but ARD is switched on.
+We see that MOFA has select default (gaussian) likelihood for all our data and include 15 factors (latent variables). It does not do Spike and Slap but ARD is switched on.
 
 Let's set the number of factors to 10 and continue
-
 ```{r}
 model_opts$num_factors <- 10
 ```
 
 We can now start the training:
-
 ```{r}
 MOFAobject <- prepare_mofa(MOFAobject,
   model_options = model_opts
@@ -1021,8 +1068,8 @@ MOFAobject <- prepare_mofa(MOFAobject,
 MOFAobject <- invisible(run_mofa(MOFAobject))
 ```
 
-The most important insight that MOFA generates is the variance decomposition analysis. This plot shows the percentage of variance explained by each factor across each data modality.
-
+## Variance decomposition
+The most important insight that MOFA generates is the **variance decomposition analysis**. This plot shows the percentage of variance explained by each factor across each data modality.
 ```{r}
 plot_variance_explained(MOFAobject)
 ```
@@ -1037,22 +1084,25 @@ In the **protein** view, while Factor1 remains dominant, Factor3 emerges as sign
 
 Factors such as Factor4 and Factor7 exhibit diverse roles across the views. In the mirna view, Factor4 explains a notable 12.77% but diminishes to 0.16% and 0.02% in the mrna and protein views respectively. Factor7, on the other hand, is more prominent in the mirna view with 7.09% but is almost negligible in the other two views.
 
-**which factor consistently plays a vital role across all views?**
+**Which factor consistently plays a vital role across all views?**
 
-It's important to see if the model fits the data well. We can do this by looking at how much of the data's changes the model can explain. The results change based on the kind of data, how many samples we have, and how many factors we use.
+It is important to see if the model fits the data well. We can do this by looking at how much of total variance is explained by factors across different views. Here, the results will usually vary based on the kind of data, number of samples and number of factors used.
 
 ```{r}
-var_plot<-plot_variance_explained(MOFAobject, plot_total = T)[[2]]
+var_plot <- plot_variance_explained(MOFAobject, plot_total = T)[[2]]
 var_plot
 ```
 
-In this data set, using 10 factors the model explains about `r round(var_plot$data$R2[var_plot$data$view=="mirna"])`% of the variation in the miRNA, `r round(var_plot$data$R2[var_plot$data$view=="mrna"])`% of the variation in the mRNA data and `r round(var_plot$data$R2[var_plot$data$view=="protein"])`% of the variation in the protein data.
+In this data set, by using 10 factors the MOFA model explains about `r round(var_plot$data$R2[var_plot$data$view=="mirna"])`% of the variation in the miRNA, `r round(var_plot$data$R2[var_plot$data$view=="mrna"])`% of the variation in the mRNA data and `r round(var_plot$data$R2[var_plot$data$view=="protein"])`% of the variation in the protein data.
 
-Now that we know we have a reasonable model, given that Factor1 consistently plays a vital role across all views, we aim to characterize its molecular signal and its association with available sample covariates. Here are the steps we'll follow:
+Now that we know we have a reasonable model, given that Factor1 consistently plays a vital role across all views, we aim to characterize its molecular signal and its association with available sample covariates. Here are the steps we will follow:
 
-To understand the relation between Factor1 values and sample metadata, we'll perform an association analysis.
+## Exploring factors
+
+To understand the relation between Factor1 values and sample metadata, we will perform an association analysis.
 
 ```{r}
+#| fig-align: center
 
 samples_metadata(MOFAobject) <- data.frame(sample=colnames(data_mofa$mirna),subtype=breast.TCGA$data.train$subtype)
 
@@ -1063,12 +1113,14 @@ correlate_factors_with_covariates(MOFAobject,
 
 ```
 
-This clearly shows a strong association of Factor1 to cancer subtype. The rest of the factors are more or less don't have a clear association with subtype.
+This clearly shows a strong association of Factor1 to cancer subtype. The rest of the factors more or less do not have a clear association with the cancer subtype.
 
 Now that we have a Factor of interest we can plot the values of it. Factors in MOFA are similar to PCA so they are designed to isolate distinct sources of variance present within the data. From a mathematical standpoint, each factor can be described as a linear amalgamation of the provided features. These factors position samples on a one-dimensional scale centered around zero.
 
 ```{r}
-# Visualizing the factors
+#| fig-align: center
+
+# visualize the factors
 plot_factors(MOFAobject, 
   factors = c(1,2), 
   dot_size = 2.5,shape_by = "subtype"
@@ -1078,6 +1130,8 @@ plot_factors(MOFAobject,
 We can see that the pattern in Factor1 has captures the group differences. We can also look at this using violin plot:
 
 ```{r}
+#| fig-align: center
+
 plot_factor(MOFAobject, 
   factors = 1, 
   color_by = "subtype",
@@ -1093,6 +1147,7 @@ Feature weights play an important role in understanding the influence of each fe
 Let's look athe top 10 features in mRNA.
 
 ```{r}
+#| fig-align: center
 
 plot_top_weights(MOFAobject,view = "mrna",
  factor = 1,
@@ -1104,6 +1159,8 @@ plot_top_weights(MOFAobject,view = "mrna",
 The plot suggest that `STC2` has a strong *negative* relationship with Factor1. Looking back at the score plot, we see that our `Basal` subtype has ended up on the right of the plot, `Her2` in the middle and `LumA` on the left. This suggest that the expression of `STC2` is higher in `LumA` vs `Her2` and also `Her2` vs `LumA`. Let's check it:
 
 ```{r}
+#| fig-align: center
+
 plot_data_scatter(MOFAobject, 
   view = "mrna",
   factor = 1, features = "STC2",color_by = "subtype"
@@ -1113,9 +1170,13 @@ plot_data_scatter(MOFAobject,
 Great. But we have so many other features, do we have a subgroup of features in our data:
 
 ```{r}
+#| fig-align: center
 
-sample_group<-samples_metadata(MOFAobject)
-rownames(sample_group)<-sample_group[,1]
+
+# plot heatmap
+sample_group <- samples_metadata(MOFAobject)
+rownames(sample_group) <- sample_group[,1]
+
 heatmap_plot <- plot_data_heatmap(MOFAobject, 
 view = "mrna",
   factor = 1, features = 50,
@@ -1129,6 +1190,9 @@ heatmap_plot
 We can at least see two big groups of genes having contrasting expression pattern. Let's extract these features and investigate them more.
 
 ```{r}
+#| fig-align: center
+
+
 feature_subgroups<-cutree(heatmap_plot$tree_row,2)
 
 plot_data_scatter(MOFAobject, 
@@ -1150,9 +1214,19 @@ plot_data_scatter(MOFAobject,
 
 As it is clear the two subgroups are related to the features that are positively and negatively correlated with the first factor. This is a good indication that we can use the weights to group the features. We can use these groups to do enrichment analysis or similar. We are going to move on now to the last section.
 
-**Your main task is to perform MOFA on the test data which is in `breast.TCGA$data.test`** 1. Do you see the same pattern as in the training set? 2. Do the top 10 most important features overlap between training and testing? 3. How about the grouping of the features?
+::: {#exr-mofa}
 
-## Time Series analysis
+### MOFA
+
+Can you perform MOFA on the test data which is in `breast.TCGA$data.test`? 
+
+1. Do you see the same pattern as in the training set? 
+2. Do the top 10 most important features overlap between training and testing? 
+3. How about the grouping of the features?
+
+:::
+
+# Time Series analysis
 
 If you remember from the original definition of GFA, our prior assumption on $Z$ is $\mathbf z \sim \mathcal{N}(0, 1)$. This means that we draw observations from a normal distribution with a mean of 0 and an identity covariance matrix, each observation is independent of the others. The identity covariance matrix means that there's no correlation between any pair of observations.
 
@@ -1194,8 +1268,9 @@ $$K = \begin{bmatrix}
 
 Gene expression levels closer in time (e.g., consecutive hours) are more correlated than those further apart. This is because the cellular response, post-stimulus, might involve a cascade of events, and the gene's role in this cascade might change as time progresses. The EQ kernel captures this decay in correlation, reflecting the idea that as time progresses, the cellular context changes, and thus the gene's expression level might become less predictable based on earlier measurements.
 
-Now we are going to change the previous proir on $Z$ to be $\mathbf z \sim \mathcal{N}(0, K)$. Here, we are drawing observations from a multivariate normal distribution with a mean of 0 but with a covariance matrix $K$ derived from a Gaussian Process. as said before this covariance matrix $K$ introduces dependencies between the observations and the nature and structure of these dependencies are determined by the kernel function used to generate ( K ).
+Now we are going to change the previous prior on $Z$ to be $\mathbf z \sim \mathcal{N}(0, K)$. Here, we are drawing observations from a multivariate normal distribution with a mean of 0 but with a covariance matrix $K$ derived from a Gaussian Process. as said before this covariance matrix $K$ introduces dependencies between the observations and the nature and structure of these dependencies are determined by the kernel function used to generate ( K ).
 
+## R implemenation
 So let's try to implement this! First we will have to change our initial data a bit to have a smooth trend that emulates real-world scenarios. A common pattern observed in biological systems is the circadian rhythm, a natural, internal process that regulates the sleep-wake cycle and repeats roughly every 24 hours. This rhythmic oscillation is present in various biological processes and can significantly influence the expression patterns of certain genes and proteins. To do that we will introduce an artificial circadian-like oscillation to specific features of our dataset. This sinusoidal pattern will mimic the natural rhythmic changes one might observe in gene or protein expression data due to the influence of the circadian clock.
 
 ```{r}
@@ -1387,7 +1462,7 @@ scatter.smooth(time_covariate,scores_global[,4],span = 0.1,,main="smooth GFA l4"
 
 Here I have done GFA both with and without smoothing. Just by looking at the factors we can see the smooth GFA has captured the time trend in our data where as in the GFA without smooth, the trend is not as clear. Please note that i have just used normal prior for $l$ which might not make that much sense. In reality one can use a much suited prior.
 
-### Time series in MOFA
+## Time series in MOFA
 
 MOFA also provides us with tools to do time series analysis using GP but with much more robust model. Let's see how can do the same analysis using MOFA or more specifically MEFISTO.
 

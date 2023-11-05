@@ -1,0 +1,17 @@
+# Preface {.unnumbered}
+
+Data Integration using MOFA lab comes in two flavors, light and detailed version. See a short description on what to except from each and feel free to choose the one you want to work with during the workshop. 
+
+### Light version
+- Shows how we use `MOFA2` package for factor analysis model, integrating multi-omics data in unsupervised way.
+- Gives minimalist explanation of the method, skipping mathematical foundations. It may be good as first read or as a quick guide how to use `MOFA2` when already knowing the foundations behind the methods.
+
+[Take me to the light version](mofa-light.html)
+
+### Detailed version
+- Introduces MOFA starting from mathematical foundations of PCA. Goes over PCA, PPCA, BPCA, CCA, BCCA to reach GA MOFA. 
+- It includes mathematical foundations and R code from scratch. Yay! 
+- It shows how to run things with `MOFA2`, also introducing time series analysis (R code and via `MEFISTO`).
+- May take some time to go through and be slightly challenging. Recommended when wanting to understand the methods. 
+
+[Take me to the detailed version](mofa.html)
