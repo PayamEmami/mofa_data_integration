@@ -16,7 +16,7 @@ editor_options:
 
 Setting up environment
 
-You will need to install a few packages to fully run this notebook. The main packages needed are `MOFA2` and `ggplot2` but in order to run Bayesian modeling you will need to install `rstan`. A good place to start with `rstan` installation is here: <https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started>
+You will need to install a few packages to fully run this notebook. The main packages needed are `MOFA2` and `ggplot2` but in order to run bayesian modeling you will need to install `rstan`. A good place to start with `rstan` installation is here: <https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started>
 
 ```{r, eval=FALSE}
 if (!requireNamespace("BiocManager", quietly = TRUE))
@@ -35,7 +35,7 @@ if(length(new_packages)) install.packages(new_packages, dependencies = TRUE, typ
 
 # Introduction
 
-In classical data integration, we would like to use information across different modalities (e.g. transcriptome, proteome and metabolome) to gain more comprehensive insights into the biological systems under study. This type of data can be used for an array of different purposes including but not limited to molecular classification, stratification of patients, outcome predictions and understanding of regulatory processes such as gene regulation and pathway analysis.
+In classical data integration, we would like to use information across different modalities (eg., transcriptome, proteome and metabolome) to gain more comprehensive insights into the biological systems under study. This type of data can be used for an array of different purposes including but not limited to molecular classification, stratification of patients, outcome predictions and understanding of regulatory processes such as gene regulation and pathway analysis.
 
 In this specific context, we are going to focus on unsupervised modeling and segmentation, which are promising because each type of omics data may contribute valuable information to the overall understanding of complex biological systems. By leveraging unsupervised modeling, we can uncover hidden patterns and relationships within the data without relying on predefined labels. This is especially beneficial when dealing with omics data, where the volume and complexity can be overwhelming. Furthermore, segmentation allows us to group similar data points, making it easier to identify and analyze specific subsets of the data. Given the heterogeneous nature of omics data, integrating multiple types can provide a more comprehensive view of the underlying biological processes.
 
@@ -106,7 +106,7 @@ There are other algorithms for doing PCA for example using power methods but alm
 
 ## PCA in R
 
-Doing PCA in R using SVD is straight forward. We center our data and use the `svd` function.
+Doing PCA in R using SVD is straight forward. Wecenter our data and use the `svd` function.
 
 ```{r}
 #| fig-width: 6
@@ -126,7 +126,7 @@ calculated_scores <- data_centered_mrna%*%svd_mrna$v
 plot(calculated_scores[,1:2],xlab="pc1",ylab="pc2",col=breast.TCGA$data.train$subtype)
 ```
 
-This will give us identical results compared to the for example standard `prcomp` function
+This will give us identical results comapred to the for example standard `prcomp` functio
 
 ```{r}
 #| fig-width: 6
@@ -140,7 +140,7 @@ pca_prcomp <- prcomp(data_centered_mrna)
 plot(pca_prcomp$x[,1:2],xlab="pc1",ylab="pc2",col=breast.TCGA$data.train$subtype)
 ```
 
-In practice there are more specialized packages that can be used to do PCA. For instance `mixOmics` provides a very powerful PCA method that provide us not only with standard PCA but also with extra advantages (e.g. missing value handling, plotting, handling repeated measurements etc.). See Data Integration using mixOmics labs for some examples.
+In practice there are more specialized packages that can be used to do PCA. For instance `mixOmics` provides a very powerful PCA method that provide us not only with standard PCA but also with extra advantages (e.g. missing value handling, plotting, handling repeated measurements etc.). See DataIntegration using mixOmics labs for some examples.
 
 This observed separation and overlap in the PCA plot is not just a graphical representation but is rooted in the underlying biology of these cancer subtypes. The positioning of the different groups on the PCA plot is influenced by the expression levels of various mRNAs, each contributing differently to the principal components.
 
@@ -403,7 +403,7 @@ The goal here is to minimize the KL divergence between the approximate posterior
 
 ### BPCA R implementation
 
-R provides an excellent interface to Stan through the `rstan` package, allowing users to build, fit, and interrogate complex Bayesian models with ease. We are going to use `rstan` here. 
+R provides an excellent interface to Stan through the `rstan` package, allowing users to build, fit, and interrogate complex Bayesian models with ease. We are going to use `rstan` here.
 
 *You can run the script if you have successfully installed `rstan` package otherwise you can skip running the scripts and continue reading.*
 
@@ -482,7 +482,7 @@ We have now implemented a complete Bayesian PCA in R and Stan. Time to move towa
 
 # Canonical Correlation Analysis CCA (two data sets)
 
-Canonical Correlation Analysis (CCA) is similar to PCA with the capability to analyze multivariate correlations between two data sets. While PCA focuses on maximizing variance within a single dataset, CCA identifies linear combinations of variables from two data sets that are maximally correlated. It provides pairs of canonical variables and their associated canonical correlations, giving insights into the shared structure and relationships between data sets. This is particularly suited in multi-omics studies, where understanding the interplay between different types of biological data is crucial.
+Canonical Correlation Analysis (CCA) is similar to PCA with the capability to analyze multivariate correlations between two data sets. While PCA focuses on maximizing variance within a single dataset, CCA identifies linear combinations of variables from two datasets that are maximally correlated. It provides pairs of canonical variables and their associated canonical correlations, giving insights into the shared structure and relationships between datasets. This is particularly suited in multi-omics studies, where understanding the interplay between different types of biological data is crucial.
 
 CCA seeks to find pairs of linear combinations, one from each dataset, that are maximally correlated. If we have two data sets $X$ and $Y$, the canonical correlations are obtained by solving the optimization problem:
 
@@ -492,7 +492,7 @@ $$
 
 where $a$ and $b$ are the canonical weights, and $\rho$ is the canonical correlation.
 
-The cross-covariance matrix between $X$ and $Y$ plays a central role in calculating CCA weights. We compute it and then apply SVD to find the weights and correlations. The process is similar to performing SVD in PCA but extends to exploring relationships between two data sets.
+The cross-covariance matrix between $X$ and $Y$ plays a central role in calculating CCA weights. We compute it and then apply SVD to find the weights and correlations. The process is similar to performing SVD in PCA but extends to exploring relationships between two datasets.
 
 $$
 \text{SVD}(\Sigma_{XY}) = U \Lambda V^T
@@ -519,7 +519,9 @@ Y = Y-T_y(Y^TT_U(T^T_UT_U)^{-1})^T
 $$ The process is repeated to extract additional pairs of canonical variables.
 
 ## CCA in R
+
 Let's have a look at how we can derive this in R using miRNA and mRNA data
+
 ```{r}
 #| fig-height: 8
 #| fig-align: center
@@ -560,7 +562,7 @@ canonical_vars_X2 <- X_centered %*% U
 canonical_vars_Y2 <- Y_centered %*% V
 
 par(mfrow=c(2,2))
-plot(canonical_vars_X,canonical_vars_X2,col=breast.TCGA$data.train$subtype,xlab="l1",ylab="l2",main="CCA mRNA")
+plot(canonical_vars_X,canonical_vars_X2,col=breast.TCGA$data.train$subtype,xlab="l1",ylab="l2",main="CCA protein")
 plot(canonical_vars_Y,canonical_vars_Y2,col=breast.TCGA$data.train$subtype,xlab="l1",ylab="l2",main="CCA protein")
 
 plot(canonical_vars_X,canonical_vars_Y,col=breast.TCGA$data.train$subtype,xlab="mRNA",ylab="protein",main="l1")
@@ -569,7 +571,7 @@ plot(canonical_vars_X2,canonical_vars_Y2,col=breast.TCGA$data.train$subtype,xlab
 
 The plot above clearly shows that we ended up having a shared pattern in `l1` (first CCA component). L1 captures the primary mode of correlation between protein and mRNA expression data. It represents the linear combinations of protein and mRNAs that are most strongly correlated. Since our interest right now is in the suptypes, we can probably ignore the second latent factor but we might as well try to explaining based on some other factors.
 
-In the context of CCA, loadings play a role similar to that in PCA, yet they have a distinct interpretation. Similar to PCA, where loadings indicate the contribution of each original variable to the principal components, in CCA, the loadings show the contribution of each variable to the canonical variables. However, the difference lies in their meaning. While PCA loadings represent the contribution to the variance within a single dataset, CCA loadings show the contribution to the correlation between two data sets.
+In the context of CCA, loadings play a role similar to that in PCA, yet they have a distinct interpretation. Similar to PCA, where loadings indicate the contribution of each original variable to the principal components, in CCA, the loadings show the contribution of each variable to the canonical variables. However, the difference lies in their meaning. While PCA loadings represent the contribution to the variance within a single dataset, CCA loadings show the contribution to the correlation between two datasets.
 
 ## Bayesian Canonical Correlation Analysis (BCCA)
 
@@ -579,7 +581,7 @@ $$X = ZW_x^T + \epsilon_x$$ $$Y = ZW_y^T + \epsilon_y$$
 
 If you look a the equation we can see we have a shared latent factor ($Z$) but weights and noise are different across the dataset. So our latent factor $Z$ is going to capture the shared pattern using a global score and in addition the weights can be used to project the original data into data view specific scores.
 
-In BCCA also: 1. The latent variables $\mathbf z$ follow a standard normal distribution: $$ \mathbf z \sim \mathcal{N}(0, 1) $$ 2. The weight matrix for both data sets $\mathbf{W_{x,y}}$ also follows a standard normal distribution: $$ \mathbf{W_{x,y}} \sim \mathcal{N}(0, 1) $$
+In BCCA also: 1. The latent variables $\mathbf z$ follow a standard normal distribution: $$ \mathbf z \sim \mathcal{N}(0, 1) $$ 2. The weight matrix for both datasets $\mathbf{W_{x,y}}$ also follows a standard normal distribution: $$ \mathbf{W_{x,y}} \sim \mathcal{N}(0, 1) $$
 
 3.  The precision parameter $\tau_{x,y}$ follows a gamma distribution with parameters $\alpha_0$ and $\beta_0$: $$ \tau \sim \mathcal{G}(\alpha_0, \beta_0) $$
 
@@ -587,7 +589,7 @@ In BCCA also: 1. The latent variables $\mathbf z$ follow a standard normal distr
 
 5.  The observed data $\mathbf{x}_n$ and $\mathbf{y}_n$ follows a normal distribution with mean $\mathbf W_x\mathbf z_n$ and $\mathbf W_y\mathbf z_n$ and covariance $\tau_{x,y}^{-1}$ so $$ \mathbf{x}_n \sim \mathcal{N}(\mathbf W_x\mathbf z_n, \tau_x^{-1} \mathbf ) $$ and $$ \mathbf{y}_n \sim \mathcal{N}(\mathbf W_y\mathbf z_n, \tau_y^{-1} \mathbf ) $$.
 
-The rest of the optimization etc are similar to those of BPCA. 
+The rest of the optimization etc are similar to those of BPCA.
 
 ### BCCA R implementation
 
@@ -802,7 +804,7 @@ plot(scores_global, col=breast.TCGA$data.train$subtype, main="GFA global", xlab=
 
 In the code above, since Stan does not support ragged data structures (data structures with different lengths), we had to concatenate the data first, but then instruct Rstan to put different assumptions on different columns of the data depending on which modality it originates from.
 
-The results are more or less clear; we have captured the shared pattern across these three data sets.
+The results are more or less clear; we have captured the shared pattern across these three datasets.
 
 One more thing before talking about MOFA is that we have been omitting sparsity considerations in our model. Sparsity plays a crucial role in high-dimensional data analysis, ensuring that the model remains interpretable and avoids overfitting. Two popular approaches to incorporate sparsity are Automatic Relevance Determination (ARD) and the Spike-and-slab prior.
 
@@ -972,11 +974,13 @@ MOFA follows GFA under the hood but it also allows one to use different priors d
 
 # Data integration using MOFA2
 
-## Building and training the MOFA object
 In order to do data integration using MOFA we first have to construct a list of data matrices:
+
 ```{r}
 # load library
 library(MOFA2)
+# load the data
+load("TCGA.rda")
 
 # remove the subtype information from training data
 data_mofa <- breast.TCGA$data.train[-4]
@@ -986,27 +990,31 @@ data_mofa <- lapply(data_mofa, t)
 ```
 
 We can then use `create_mofa` to create a MOFA object:
+
 ```{r}
 MOFAobject <- create_mofa(data_mofa)
 ```
 
 We can have a look at the structure of the input data:
+
 ```{r}
 #| fig-align: center
 plot_data_overview(MOFAobject)
 ```
 
-This essentially shows us how many samples we have and how many features per data view is there. If there were missing values, these would be shown as white lines. 
+This essentially shows us how many samples we have and how many features per data view is there. If there were missing values, these would be shown as white lines.
 
 ::: {#exr-na}
 ### NA
+
 Can you add a bit of missing values and check how the plot will change?
 :::
+
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
-#| eval: false
+#| eval: true
 
 # Let's randomly introduce NAs to 20% of samples in one omics e.g. protein data
 # This is an example code. You can probably find an easier way to solve this :) 
@@ -1036,6 +1044,7 @@ plot_data_overview(MOFAobject_with_na)
 ```
 
 Before we start modeling we should have a look at the distribution of the data to decide which one to use.
+
 ```{r}
 #| fig-align: center
 #| fig-height: 7
@@ -1048,28 +1057,31 @@ hist(data_mofa$mirna)
 All of our data is seems to be normally distributed so we use normal distribution. In practice MOFA allows us to select 'gaussian' for continuous data (e.g proteomics), 'bernoulli' for binary data (e.g. methylation) and 'poisson' for count data (e.g. RNA-Seq).
 
 We can now set the parameters and train the model:
+
 ```{r}
 model_opts <- get_default_model_options(MOFAobject)
 print(model_opts)
 ```
 
-We see that MOFA has select default (gaussian) likelihood for all our data and include 15 factors (latent variables). It does not do Spike and Slap but ARD is switched on.
+We see that MOFA has select default (gaussian) likelyhood for all our data and include 15 factors (latent variables). It does not do Spike and Slap but ARD is switched on.
 
 Let's set the number of factors to 10 and continue
+
 ```{r}
 model_opts$num_factors <- 10
 ```
 
 We can now start the training:
+
 ```{r}
 MOFAobject <- prepare_mofa(MOFAobject,
   model_options = model_opts
 )
-MOFAobject <- invisible(run_mofa(MOFAobject))
+MOFAobject <- invisible(run_mofa(MOFAobject, use_basilisk = T))
 ```
 
-## Variance decomposition
 The most important insight that MOFA generates is the **variance decomposition analysis**. This plot shows the percentage of variance explained by each factor across each data modality.
+
 ```{r}
 plot_variance_explained(MOFAobject)
 ```
@@ -1086,23 +1098,20 @@ Factors such as Factor4 and Factor7 exhibit diverse roles across the views. In t
 
 **Which factor consistently plays a vital role across all views?**
 
-It is important to see if the model fits the data well. We can do this by looking at how much of total variance is explained by factors across different views. Here, the results will usually vary based on the kind of data, number of samples and number of factors used.
+It is important to see if the model fits the data well. We can do this by looking at how much of the data's changes the model can explain. The results change based on the kind of data, how many samples we have, and how many factors we use.
 
 ```{r}
 var_plot <- plot_variance_explained(MOFAobject, plot_total = T)[[2]]
 var_plot
 ```
 
-In this data set, by using 10 factors the MOFA model explains about `r round(var_plot$data$R2[var_plot$data$view=="mirna"])`% of the variation in the miRNA, `r round(var_plot$data$R2[var_plot$data$view=="mrna"])`% of the variation in the mRNA data and `r round(var_plot$data$R2[var_plot$data$view=="protein"])`% of the variation in the protein data.
+In this data set, using 10 factors the model explains about `r round(var_plot$data$R2[var_plot$data$view=="mirna"])`% of the variation in the miRNA, `r round(var_plot$data$R2[var_plot$data$view=="mrna"])`% of the variation in the mRNA data and `r round(var_plot$data$R2[var_plot$data$view=="protein"])`% of the variation in the protein data.
 
-Now that we know we have a reasonable model, given that Factor1 consistently plays a vital role across all views, we aim to characterize its molecular signal and its association with available sample covariates. Here are the steps we will follow:
+Now that we know we have a reasonable model, given that Factor1 consistently plays a vital role across all views, we aim to characterize its molecular signal and its association with available sample covariates. Here are the steps we'll follow:
 
-## Exploring factors
-
-To understand the relation between Factor1 values and sample metadata, we will perform an association analysis.
+To understand the relation between Factor1 values and sample metadata, we'll perform an association analysis.
 
 ```{r}
-#| fig-align: center
 
 samples_metadata(MOFAobject) <- data.frame(sample=colnames(data_mofa$mirna),subtype=breast.TCGA$data.train$subtype)
 
@@ -1113,14 +1122,12 @@ correlate_factors_with_covariates(MOFAobject,
 
 ```
 
-This clearly shows a strong association of Factor1 to cancer subtype. The rest of the factors more or less do not have a clear association with the cancer subtype.
+This clearly shows a strong association of Factor1 to cancer subtype. The rest of the factors are more or less don't have a clear association with subtype.
 
 Now that we have a Factor of interest we can plot the values of it. Factors in MOFA are similar to PCA so they are designed to isolate distinct sources of variance present within the data. From a mathematical standpoint, each factor can be described as a linear amalgamation of the provided features. These factors position samples on a one-dimensional scale centered around zero.
 
 ```{r}
-#| fig-align: center
-
-# visualize the factors
+# Visualizing the factors
 plot_factors(MOFAobject, 
   factors = c(1,2), 
   dot_size = 2.5,shape_by = "subtype"
@@ -1130,8 +1137,6 @@ plot_factors(MOFAobject,
 We can see that the pattern in Factor1 has captures the group differences. We can also look at this using violin plot:
 
 ```{r}
-#| fig-align: center
-
 plot_factor(MOFAobject, 
   factors = 1, 
   color_by = "subtype",
@@ -1147,7 +1152,6 @@ Feature weights play an important role in understanding the influence of each fe
 Let's look athe top 10 features in mRNA.
 
 ```{r}
-#| fig-align: center
 
 plot_top_weights(MOFAobject,view = "mrna",
  factor = 1,
@@ -1159,8 +1163,6 @@ plot_top_weights(MOFAobject,view = "mrna",
 The plot suggest that `STC2` has a strong *negative* relationship with Factor1. Looking back at the score plot, we see that our `Basal` subtype has ended up on the right of the plot, `Her2` in the middle and `LumA` on the left. This suggest that the expression of `STC2` is higher in `LumA` vs `Her2` and also `Her2` vs `LumA`. Let's check it:
 
 ```{r}
-#| fig-align: center
-
 plot_data_scatter(MOFAobject, 
   view = "mrna",
   factor = 1, features = "STC2",color_by = "subtype"
@@ -1170,13 +1172,9 @@ plot_data_scatter(MOFAobject,
 Great. But we have so many other features, do we have a subgroup of features in our data:
 
 ```{r}
-#| fig-align: center
 
-
-# plot heatmap
-sample_group <- samples_metadata(MOFAobject)
-rownames(sample_group) <- sample_group[,1]
-
+sample_group<-samples_metadata(MOFAobject)
+rownames(sample_group)<-sample_group[,1]
 heatmap_plot <- plot_data_heatmap(MOFAobject, 
 view = "mrna",
   factor = 1, features = 50,
@@ -1190,9 +1188,6 @@ heatmap_plot
 We can at least see two big groups of genes having contrasting expression pattern. Let's extract these features and investigate them more.
 
 ```{r}
-#| fig-align: center
-
-
 feature_subgroups<-cutree(heatmap_plot$tree_row,2)
 
 plot_data_scatter(MOFAobject, 
@@ -1214,19 +1209,9 @@ plot_data_scatter(MOFAobject,
 
 As it is clear the two subgroups are related to the features that are positively and negatively correlated with the first factor. This is a good indication that we can use the weights to group the features. We can use these groups to do enrichment analysis or similar. We are going to move on now to the last section.
 
-::: {#exr-mofa}
+**Your main task is to perform MOFA on the test data which is in `breast.TCGA$data.test`** 1. Do you see the same pattern as in the training set? 2. Do the top 10 most important features overlap between training and testing? 3. How about the grouping of the features?
 
-### MOFA
-
-Can you perform MOFA on the test data which is in `breast.TCGA$data.test`? 
-
-1. Do you see the same pattern as in the training set? 
-2. Do the top 10 most important features overlap between training and testing? 
-3. How about the grouping of the features?
-
-:::
-
-# Time Series analysis
+## Time Series analysis
 
 If you remember from the original definition of GFA, our prior assumption on $Z$ is $\mathbf z \sim \mathcal{N}(0, 1)$. This means that we draw observations from a normal distribution with a mean of 0 and an identity covariance matrix, each observation is independent of the others. The identity covariance matrix means that there's no correlation between any pair of observations.
 
@@ -1268,9 +1253,8 @@ $$K = \begin{bmatrix}
 
 Gene expression levels closer in time (e.g., consecutive hours) are more correlated than those further apart. This is because the cellular response, post-stimulus, might involve a cascade of events, and the gene's role in this cascade might change as time progresses. The EQ kernel captures this decay in correlation, reflecting the idea that as time progresses, the cellular context changes, and thus the gene's expression level might become less predictable based on earlier measurements.
 
-Now we are going to change the previous prior on $Z$ to be $\mathbf z \sim \mathcal{N}(0, K)$. Here, we are drawing observations from a multivariate normal distribution with a mean of 0 but with a covariance matrix $K$ derived from a Gaussian Process. as said before this covariance matrix $K$ introduces dependencies between the observations and the nature and structure of these dependencies are determined by the kernel function used to generate ( K ).
+Now we are going to change the previous proir on $Z$ to be $\mathbf z \sim \mathcal{N}(0, K)$. Here, we are drawing observations from a multivariate normal distribution with a mean of 0 but with a covariance matrix $K$ derived from a Gaussian Process. as said before this covariance matrix $K$ introduces dependencies between the observations and the nature and structure of these dependencies are determined by the kernel function used to generate ( K ).
 
-## R implemenation
 So let's try to implement this! First we will have to change our initial data a bit to have a smooth trend that emulates real-world scenarios. A common pattern observed in biological systems is the circadian rhythm, a natural, internal process that regulates the sleep-wake cycle and repeats roughly every 24 hours. This rhythmic oscillation is present in various biological processes and can significantly influence the expression patterns of certain genes and proteins. To do that we will introduce an artificial circadian-like oscillation to specific features of our dataset. This sinusoidal pattern will mimic the natural rhythmic changes one might observe in gene or protein expression data due to the influence of the circadian clock.
 
 ```{r}
@@ -1462,7 +1446,7 @@ scatter.smooth(time_covariate,scores_global[,4],span = 0.1,,main="smooth GFA l4"
 
 Here I have done GFA both with and without smoothing. Just by looking at the factors we can see the smooth GFA has captured the time trend in our data where as in the GFA without smooth, the trend is not as clear. Please note that i have just used normal prior for $l$ which might not make that much sense. In reality one can use a much suited prior.
 
-## Time series in MOFA
+### Time series in MOFA
 
 MOFA also provides us with tools to do time series analysis using GP but with much more robust model. Let's see how can do the same analysis using MOFA or more specifically MEFISTO.
 
@@ -1550,19 +1534,19 @@ Given this, the main question is if MOFA has been successful in capturing the va
 #| layout-ncol: 3
 # Plot the weights of the top 20 features for the third factor
 
-color_mirna=data.frame(feature=rownames(sm@data$mirna$group1),
-                       sinusoidal=rep(c("Yes","No"),c(20,nrow(sm@data$mirna$group1)-20)),
+color_mirna=data.frame(feature=rownames(MOFAobject@data$mirna$group1),
+                       sinusoidal=rep(c("Yes","No"),c(20,nrow(MOFAobject@data$mirna$group1)-20)),
                        view="mirna")
-color_mrna=data.frame(feature=rownames(sm@data$mrna$group1),
-                      sinusoidal=rep(c("Yes","No"),c(25,nrow(sm@data$mrna$group1)-25)),
+color_mrna=data.frame(feature=rownames(MOFAobject@data$mrna$group1),
+                      sinusoidal=rep(c("Yes","No"),c(25,nrow(MOFAobject@data$mrna$group1)-25)),
                       view="mrna")
-color_protein=data.frame(feature=rownames(sm@data$protein$group1),sinusoidal=rep(c("Yes","No"),c(15,nrow(sm@data$protein$group1)-15)),view="protein")
+color_protein=data.frame(feature=rownames(MOFAobject@data$protein$group1),sinusoidal=rep(c("Yes","No"),c(15,nrow(MOFAobject@data$protein$group1)-15)),view="protein")
 
 features_metadata(sm)<-rbind(color_mirna,color_mrna,color_protein)
 library(ggplot2)
-plot_weights(sm, factors = 3, view = "mirna", nfeatures = 20,color_by = "sinusoidal")+ggtitle("miRNA")
-plot_weights(sm, factors = 3, view = "mrna", nfeatures = 25,color_by = "sinusoidal")+ggtitle("mRNA")
-plot_weights(sm, factors = 3, view = "protein", nfeatures = 15,color_by = "sinusoidal")+ggtitle("protein")
+plot_weights(sm, factors = 1, view = "mirna", nfeatures = 20,color_by = "sinusoidal")+ggtitle("miRNA")
+plot_weights(sm, factors = 1, view = "mrna", nfeatures = 25,color_by = "sinusoidal")+ggtitle("mRNA")
+plot_weights(sm, factors = 1, view = "protein", nfeatures = 15,color_by = "sinusoidal")+ggtitle("protein")
 
 ```
 
